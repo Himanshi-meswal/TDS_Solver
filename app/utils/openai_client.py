@@ -790,18 +790,6 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
         {
             "type": "function",
             "function": {
-                "name": "find_duckdb_hn_post",
-                "description": "Find the latest Hacker News post mentioning DuckDB with at least 71 points",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
                 "name": "find_newest_seattle_github_user",
                 "description": "Find the newest GitHub user in Seattle with over 130 followers",
                 "parameters": {
@@ -1056,35 +1044,6 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
                         },
                     },
                     "required": ["file_path", "target_key"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "generate_duckdb_query",
-                "description": "Generate and format DuckDB SQL queries for various data analysis tasks",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query_type": {
-                            "type": "string",
-                            "description": "Type of query to generate (e.g., 'post_comments', 'user_activity')",
-                        },
-                        "timestamp_filter": {
-                            "type": "string",
-                            "description": "ISO timestamp for filtering data (e.g., '2025-02-26T00:17:09.465Z')",
-                        },
-                        "numeric_filter": {
-                            "type": "integer",
-                            "description": "Numeric threshold for filtering (e.g., 5 for star count)",
-                        },
-                        "sort_order": {
-                            "type": "string",
-                            "description": "Sort order for results ('ASC' or 'DESC')",
-                        },
-                    },
-                    "required": ["query_type"],
                 },
             },
         },
@@ -1419,9 +1378,6 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
                 elif function_name == "get_delhi_bounding_box":
                     answer = await get_delhi_bounding_box()
 
-                elif function_name == "find_duckdb_hn_post":
-                    answer = await get_hn_post_link_from_question(question)
-
                 elif function_name == "find_newest_seattle_github_user":
                     answer = await find_newest_seattle_github_user()
 
@@ -1483,12 +1439,6 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
                     answer = await count_json_key_occurrences(
                         file_path=function_args.get("file_path"),
                         target_key=function_args.get("target_key"),
-                    )
-                elif function_name == "generate_duckdb_query":
-                    answer = await generate_duckdb_query(
-                        timestamp_filter=function_args.get("timestamp_filter"),
-                        numeric_filter=function_args.get("numeric_filter"),
-                        sort_order=function_args.get("sort_order", "ASC"),
                     )
                 elif function_name == "transcribe_youtube_segment":
                     answer = await transcribe_youtube_segment(
