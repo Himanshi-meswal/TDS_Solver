@@ -3789,39 +3789,3 @@ async def extract_github_raw_url(question: str) -> str:
         return f"https://raw.githubusercontent.com/{user_id}/ds-assignment/main/email.json"
 
     return "Could not extract or construct a valid raw GitHub URL."
-
-#GA5 Q8
-import duckdb
-import pandas as pd
-import json
-
-async def generate_duckdb_query(timestamp_filter: str, numeric_filter: int, sort_order: str = "ASC") -> str:
-    """
-    Generate DuckDB SQL query for identifying high-impact social media posts.
-
-    Args:
-        timestamp_filter (str): ISO timestamp string to filter recent posts.
-        numeric_filter (int): Minimum useful stars in any comment.
-        sort_order (str): Sort order for post_id (default: ASC).
-
-    Returns:
-        str: SQL query as a string.
-    """
-    if not timestamp_filter or numeric_filter is None:
-        return "Missing required parameters"
-
-    sql = f"""
-    SELECT
-      post_id
-    FROM
-      social_media
-    WHERE
-      timestamp >= TIMESTAMP '{timestamp_filter}'
-      AND EXISTS (
-        SELECT *
-        FROM UNNEST(comments) AS comment
-        WHERE (comment.stars ->> 'useful')::INT > {numeric_filter}
-      )
-    ORDER BY post_id {sort_order}
-    """
-    return sql
