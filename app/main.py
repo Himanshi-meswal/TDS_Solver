@@ -87,3 +87,6 @@ async def debug_function(
 
         return {"error": str(e), "traceback": traceback.format_exc()}
 
+@app.get("/")
+def home():
+    return {"message": "IITM Assignment API is running on Vercel!"}
