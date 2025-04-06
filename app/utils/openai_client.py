@@ -22,6 +22,12 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
     """
     Get response from OpenAI via AI Proxy.
     """
+    # --- Pre-check: If the question contains "code -s", directly return the simulated output.
+    if "code -s" in question.lower():
+        print("Pre-check for 'code -s' triggered")  # Debug logging (remove once verified)
+        from app.utils.functions import execute_command  # Ensure correct import
+        return await execute_command("code -s")
+    
     # Check for Excel formula in the question
     if "excel" in question.lower() or "office 365" in question.lower():
         excel_formula_match = re.search(
@@ -42,7 +48,7 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
             result = calculate_spreadsheet_formula(formula, "google_sheets")
             return result
 
-        # Check specifically for the multi-cursor JSON hash task
+    # Check specifically for the multi-cursor JSON hash task
     if (
         ("multi-cursor" in question.lower() or "q-multi-cursor-json.txt" in question.lower())
         and ("jsonhash" in question.lower() or "hash button" in question.lower())
@@ -1128,16 +1134,12 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
         {"role": "user", "content": question},
     ]
 
-    # Add information about the file if provided
     if file_path:
-        messages.append(
-            {
-                "role": "user",
-                "content": f"I've uploaded a file that you can process. The file is stored at: {file_path}",
-            }
-        )
+        messages.append({
+            "role": "user",
+            "content": f"I've uploaded a file that you can process. The file is stored at: {file_path}",
+        })
 
-    # Prepare the request payload
     payload = {
         "model": "gpt-4o-mini",
         "messages": messages,
@@ -1145,8 +1147,6 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
         "tool_choice": "auto",
     }
 
-
-    # Make the request to the AI Proxy
     async with httpx.AsyncClient() as client:
         response = await client.post(
             f"{AIPROXY_BASE_URL}/chat/completions",
@@ -1160,28 +1160,24 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
 
         result = response.json()
         answer = None
-
-        # Process the response
         message = result["choices"][0]["message"]
 
-        # Check if there's a function call
+        # Process any tool calls (the pre-check for code -s is now handled above)
         if "tool_calls" in message:
             for tool_call in message["tool_calls"]:
                 function_name = tool_call["function"]["name"]
                 function_args = json.loads(tool_call["function"]["arguments"])
-
+                if function_name == "extract_zip_and_read_csv":
+                    answer = await extract_zip_and_read_csv(
+                        file_path=function_args.get("file_path", file_path),
+                        column_name=function_args.get("column_name"),
+                    )
                 # Execute the appropriate function based on function_name
                 if "code -s" in question.lower():
                     print("Pre-check for code -s triggered")  # (temporary logging for debugging)
                     from app.utils.functions import execute_command  # Ensure this import is here
                     return await execute_command("code -s")
     
-                elif function_name == "extract_zip_and_read_csv":
-                    answer = await extract_zip_and_read_csv(
-                        file_path=function_args.get("file_path", file_path),
-                        column_name=function_args.get("column_name"),
-                    )
-
                 elif function_name == "extract_zip_and_process_files":
                     answer = await extract_zip_and_process_files(
                         file_path=function_args.get("file_path", file_path),
