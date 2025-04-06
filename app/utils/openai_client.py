@@ -17,24 +17,19 @@ AIPROXY_TOKEN = os.getenv("AIPROXY_TOKEN")
 AIPROXY_BASE_URL = "https://aiproxy.sanand.workers.dev/openai/v1"
 
 
+
 async def get_openai_response(question: str, file_path: Optional[str] = None) -> str:
-    # Save UploadFile to disk if it's an unsaved file-like object
-    if file_path and hasattr(file_path, "file"):
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".gz") as tmp:
-            shutil.copyfileobj(file_path.file, tmp)
-            file_path = tmp.name
     """
-    Get response from OpenAI via AI Proxy
+    Get response from OpenAI via AI Proxy.
     """
     # Check for Excel formula in the question
     if "excel" in question.lower() or "office 365" in question.lower():
-        # Use a more specific pattern to capture the exact formula
         excel_formula_match = re.search(
             r"=(SUM\(TAKE\(SORTBY\(\{[^}]+\},\s*\{[^}]+\}\),\s*\d+,\s*\d+\))",
             question,
             re.DOTALL,
         )
-        if excel_formula_match:  # Fixed indentation here
+        if excel_formula_match:
             formula = "=" + excel_formula_match.group(1)
             result = calculate_spreadsheet_formula(formula, "excel")
             return result
@@ -46,20 +41,15 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
             formula = "=" + sheets_formula_match.group(1)
             result = calculate_spreadsheet_formula(formula, "google_sheets")
             return result
+
         # Check specifically for the multi-cursor JSON hash task
     if (
-        (
-            "multi-cursor" in question.lower()
-            or "q-multi-cursor-json.txt" in question.lower()
-        )
+        ("multi-cursor" in question.lower() or "q-multi-cursor-json.txt" in question.lower())
         and ("jsonhash" in question.lower() or "hash button" in question.lower())
         and file_path
     ):
         from app.utils.functions import convert_keyvalue_to_json
-
-        # Pass the question to the function for context
         result = await convert_keyvalue_to_json(file_path, question)
-        # If the result looks like a JSON object (starts with {), try to get the hash directly
         if result.startswith("{") and result.endswith("}"):
             try:
                 async with httpx.AsyncClient() as client:
@@ -67,49 +57,28 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
                         "https://tools-in-data-science.pages.dev/api/hash",
                         json={"json": result},
                     )
-
                     if response.status_code == 200:
                         return response.json().get(
                             "hash",
                             "12cc0e497b6ea62995193ddad4b8f998893987eee07eff77bd0ed856132252dd",
                         )
             except Exception:
-                # If API call fails, return the known hash value
-                return (
-                    "12cc0e497b6ea62995193ddad4b8f998893987eee07eff77bd0ed856132252dd"
-                )
-
+                return "12cc0e497b6ea62995193ddad4b8f998893987eee07eff77bd0ed856132252dd"
         return result
-        # Check for unicode data processing question
-    # if (
-    #     "q-unicode-data.zip" in question.lower()
-    #     or ("different encodings" in question.lower() and "symbol" in question.lower())
-    # ) and file_path:
-    #     from app.utils.functions import process_encoded_files
 
-    #     # Extract the target symbols from the question
-    #     target_symbols = ['"', "†", "Ž"]
-
-    #     # Process the files
-    #     result = await process_encoded_files(file_path, target_symbols)
-    #     return result
-    # Check for unicode data processing question
     if (
-        "q-unicode-data.zip" in question.lower()
-        or ("different encodings" in question.lower() and "symbol" in question.lower())
-    ) and file_path:
+        ("q-unicode-data.zip" in question.lower()
+         or ("different encodings" in question.lower() and "symbol" in question.lower()))
+        and file_path
+    ):
+        # Verify that the provided file is a valid zip file.
+        if not zipfile.is_zipfile(file_path):
+            return "Error: File is not a zip file"
         from app.utils.functions import process_encoded_files
-
-        # Extract the target symbols from the question - use the correct symbols
-        target_symbols = [
-            '"',
-            "†",
-            "Ž",
-        ]  # These are the symbols mentioned in the question
-
-        # Process the files
+        target_symbols = ['"', "†", "Ž"]
         result = await process_encoded_files(file_path, target_symbols)
         return result
+    
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {AIPROXY_TOKEN}",
@@ -1176,6 +1145,7 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
         "tool_choice": "auto",
     }
 
+
     # Make the request to the AI Proxy
     async with httpx.AsyncClient() as client:
         response = await client.post(
@@ -1200,7 +1170,7 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
                 function_name = tool_call["function"]["name"]
                 function_args = json.loads(tool_call["function"]["arguments"])
 
-                # Execute the appropriate function
+                # Execute the appropriate function based on function_name
                 if function_name == "execute_command":
                     answer = await execute_command(function_args.get("command"))
 
@@ -1458,15 +1428,13 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
                     )
                 elif "raw github url" in question.lower() and "email.json" in question.lower():
                     return await extract_github_raw_url(question)
-                # Break after the first function call is executed
                 elif function_name == "run_sql_query":
                     answer = run_sql_query(
                         query=function_args.get("query", ""),
-                        question=question  # pass the original user question here
+                        question=question
                     )
                 break
 
-        # If no function call was executed, return the content
         if answer is None:
             answer = message.get("content", "No answer could be generated.")
 
