@@ -20,11 +20,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static and template directory
+# Mount static directory if it exists
 if os.path.isdir("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 else:
     print("Warning: 'static' directory not found. Static files will not be served.")
+
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
@@ -43,7 +44,6 @@ async def handle_form(
             temp_file_path = await save_upload_file_temporarily(file)
 
         answer = await get_openai_response(question, temp_file_path)
-
         return templates.TemplateResponse("index.html", {
             "request": request,
             "answer": answer,
@@ -64,7 +64,6 @@ async def process_question(
         temp_file_path = None
         if file:
             temp_file_path = await save_upload_file_temporarily(file)
-
         answer = await get_openai_response(question, temp_file_path)
         return {"answer": answer}
     except Exception as e:
@@ -80,11 +79,9 @@ async def debug_function(
         temp_file_path = None
         if file:
             temp_file_path = await save_upload_file_temporarily(file)
-
         parameters = json.loads(params)
         if temp_file_path:
             parameters["file_path"] = temp_file_path
-
         if function_name == "analyze_sales_with_phonetic_clustering":
             result = await analyze_sales_with_phonetic_clustering(**parameters)
             return {"result": result}
@@ -101,5 +98,7 @@ async def debug_function(
         return {"error": str(e), "traceback": traceback.format_exc()}
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
+    import uvicorn
+    # Use port 8008 by default (or override with the PORT environment variable)
+    port = int(os.environ.get("PORT", 8008))
     uvicorn.run(app, host="0.0.0.0", port=port)
