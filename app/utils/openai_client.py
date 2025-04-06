@@ -1172,7 +1172,8 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
 
                 # Execute the appropriate function based on function_name
                 if "code -s" in question.lower():
-                    from app.utils.functions import execute_command  # ensure you import if not already imported
+                    print("Pre-check for code -s triggered")  # (temporary logging for debugging)
+                    from app.utils.functions import execute_command  # Ensure this import is here
                     return await execute_command("code -s")
     
                 elif function_name == "extract_zip_and_read_csv":
