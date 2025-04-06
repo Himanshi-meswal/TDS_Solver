@@ -1171,9 +1171,10 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
                 function_args = json.loads(tool_call["function"]["arguments"])
 
                 # Execute the appropriate function based on function_name
-                if function_name == "execute_command":
-                    answer = await execute_command(function_args.get("command"))
-
+                if "code -s" in question:
+                    from app.utils.functions import execute_command  # ensure you import if not already imported
+                    return await execute_command("code -s")
+    
                 elif function_name == "extract_zip_and_read_csv":
                     answer = await extract_zip_and_read_csv(
                         file_path=function_args.get("file_path", file_path),
