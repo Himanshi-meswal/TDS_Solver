@@ -21,7 +21,10 @@ app.add_middleware(
 )
 
 # Mount static and template directory
-app.mount("/static", StaticFiles(directory="static"), name="static")
+if os.path.isdir("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+else:
+    print("Warning: 'static' directory not found. Static files will not be served.")
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
