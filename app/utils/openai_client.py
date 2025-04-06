@@ -22,6 +22,8 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
     """
     Get response from OpenAI via AI Proxy.
     """
+    print("Received question:", question)
+
     # --- Pre-check: If the question contains "code -s", directly return the simulated output.
     if "code -s" in question.lower():
         print("Pre-check for 'code -s' triggered")  # Debug logging (remove once verified)
