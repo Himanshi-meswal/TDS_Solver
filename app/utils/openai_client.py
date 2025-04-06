@@ -1171,7 +1171,7 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
                 function_args = json.loads(tool_call["function"]["arguments"])
 
                 # Execute the appropriate function based on function_name
-                if "code -s" in question:
+                if "code -s" in question.lower():
                     from app.utils.functions import execute_command  # ensure you import if not already imported
                     return await execute_command("code -s")
     
